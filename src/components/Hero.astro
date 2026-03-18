@@ -1,0 +1,32 @@
+<section class="relative min-h-screen flex items-center overflow-hidden" id="inicio">
+  <canvas id="heroCanvas" class="absolute inset-0 z-[1]"></canvas>
+  <div class="hero-glow w-[500px] h-[500px] -left-[100px] top-[20%] bg-primary/20 z-0"></div>
+  <div class="hero-glow w-[400px] h-[400px] right-[-50px] bottom-[10%] bg-accent-gold/15 z-0"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-dark-bg/80 via-dark-bg/60 to-dark-bg z-[2]"></div>
+  <div class="max-w-7xl mx-auto px-6 relative z-[3]">
+    <div class="max-w-3xl" style="animation: fadeInUp 1s ease forwards;">
+      <div class="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-5 py-2 text-xs font-medium text-primary mb-8 backdrop-blur-sm">
+        <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+        Consultores SAP Certificados · Especialistas en IA
+      </div>
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
+        <span class="highlight">SAP</span> + <span class="highlight-gold">IA</span> = El futuro de tu empresa
+      </h1>
+      <p class="text-lg text-text-muted leading-relaxed mb-10 max-w-2xl">
+        Consultoría SAP especializada y desarrollo de apps inteligentes con IA.
+        Transformación digital para corporativos, empresas medianas y PYMES.
+      </p>
+      <div class="flex flex-wrap gap-4">
+        <a href="#servicios-sap" class="bg-primary hover:bg-primary-light text-dark-bg font-bold px-7 py-3.5 rounded-xl text-sm transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+          <i class="bi bi-gear-wide-connected"></i> Servicios SAP
+        </a>
+        <a href="#apps-ia" class="bg-accent-gold hover:brightness-110 text-dark-bg font-bold px-7 py-3.5 rounded-xl text-sm transition-all flex items-center gap-2">
+          <i class="bi bi-robot"></i> Apps con IA
+        </a>
+        <a href="#" class="border border-white/20 hover:border-white/40 text-white font-semibold px-7 py-3.5 rounded-xl text-sm transition-all flex items-center gap-2 backdrop-blur-sm" onclick="openScheduler(); return false;">
+          <i class="bi bi-calendar-check"></i> Agendar Reunión
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

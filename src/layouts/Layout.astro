@@ -1,0 +1,69 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Smart Connection | SAP + IA - Soluciones Tecnológicas Chile',
+  description = 'Smart Connection: consultores SAP certificados en Chile. Servicios SAP BTP, S/4HANA, FIORI, PI/PO, CPI, HANA, migraciones, IoT, movilidad y desarrollo de apps con IA para empresas y PYMES.',
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta name="keywords" content="SAP Chile, SAP BTP, S/4HANA, FIORI, ABAP, inteligencia artificial, apps empresariales, PYMES, Smart Connection, consultoría SAP">
+  <meta name="author" content="Smart Connection">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.smconnection.cl/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:url" content="https://www.smconnection.cl/">
+  <meta property="og:site_name" content="Smart Connection">
+  <meta property="og:locale" content="es_CL">
+  <meta property="og:image" content="https://www.smconnection.cl/img/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content="https://www.smconnection.cl/img/og-image.png">
+
+  <link rel="shortcut icon" href="/img/smart.ico">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Smart Connection",
+    "url": "https://www.smconnection.cl",
+    "logo": "https://www.smconnection.cl/img/logo_smart_black.png",
+    "description": "Empresa chilena de servicios profesionales especializada en consultoría SAP y desarrollo de apps con IA.",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Barros Borgoño 71",
+      "addressLocality": "Providencia",
+      "addressRegion": "Santiago",
+      "addressCountry": "CL"
+    },
+    "telephone": ["+56955361419", "+56977008176"],
+    "email": "contacto@smconnection.cl",
+    "sameAs": ["https://www.linkedin.com/company/smconnection/"]
+  })} />
+</head>
+<body class="bg-dark-bg text-text-main font-sans">
+  <div id="toast" class="toast"></div>
+  <slot />
+  <style is:global>
+    @import '../styles/global.css';
+  </style>
+</body>
+</html>

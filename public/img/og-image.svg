@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0e17"/>
+  <rect width="1200" height="630" fill="url(#bgGrad)" opacity="0.6"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1200" y2="630">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="50%" stop-color="#1a1f2e"/>
+      <stop offset="100%" stop-color="#0d1220"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Decorative circles -->
+  <circle cx="1050" cy="120" r="200" fill="#00c1c1" opacity="0.05"/>
+  <circle cx="150" cy="500" r="180" fill="#f0ab00" opacity="0.04"/>
+
+  <!-- Top accent line -->
+  <rect x="0" y="0" width="1200" height="4" fill="#00c1c1"/>
+
+  <!-- Cloud icon -->
+  <g transform="translate(100, 220) scale(2.5)">
+    <path d="M28 38H12a10 10 0 0 1-1-19.9A14 14 0 0 1 38 22a10 10 0 0 1-2 19.8"
+          stroke="#00c1c1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <circle cx="16" cy="28" r="3" fill="#00c1c1"/>
+    <circle cx="26" cy="22" r="3" fill="#ffffff"/>
+    <circle cx="34" cy="30" r="3" fill="#00c1c1"/>
+    <line x1="18" y1="27" x2="24" y2="23" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="28" y1="23" x2="32" y2="29" stroke="#00c1c1" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Title -->
+  <text x="230" y="280" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="2">SMART CONNECTION</text>
+
+  <!-- Subtitle -->
+  <text x="230" y="330" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="24" font-weight="400" fill="#94a3b8">Consultores SAP Certificados + Especialistas en IA</text>
+
+  <!-- Tags -->
+  <rect x="230" y="370" width="120" height="34" rx="17" fill="rgba(0,193,193,0.15)" stroke="#00c1c1" stroke-width="1"/>
+  <text x="290" y="392" font-family="'Inter',Arial,sans-serif" font-size="14" font-weight="600" fill="#00c1c1" text-anchor="middle">SAP BTP</text>
+
+  <rect x="365" y="370" width="120" height="34" rx="17" fill="rgba(0,193,193,0.15)" stroke="#00c1c1" stroke-width="1"/>
+  <text x="425" y="392" font-family="'Inter',Arial,sans-serif" font-size="14" font-weight="600" fill="#00c1c1" text-anchor="middle">S/4HANA</text>
+
+  <rect x="500" y="370" width="90" height="34" rx="17" fill="rgba(0,193,193,0.15)" stroke="#00c1c1" stroke-width="1"/>
+  <text x="545" y="392" font-family="'Inter',Arial,sans-serif" font-size="14" font-weight="600" fill="#00c1c1" text-anchor="middle">FIORI</text>
+
+  <rect x="605" y="370" width="130" height="34" rx="17" fill="rgba(240,171,0,0.15)" stroke="#f0ab00" stroke-width="1"/>
+  <text x="670" y="392" font-family="'Inter',Arial,sans-serif" font-size="14" font-weight="600" fill="#f0ab00" text-anchor="middle">Claude IA</text>
+
+  <rect x="750" y="370" width="90" height="34" rx="17" fill="rgba(240,171,0,0.15)" stroke="#f0ab00" stroke-width="1"/>
+  <text x="795" y="392" font-family="'Inter',Arial,sans-serif" font-size="14" font-weight="600" fill="#f0ab00" text-anchor="middle">AWS</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="560" width="1200" height="70" fill="#080c14"/>
+  <text x="100" y="600" font-family="'Inter',Arial,sans-serif" font-size="16" fill="#64748b">www.smconnection.cl</text>
+  <text x="1100" y="600" font-family="'Inter',Arial,sans-serif" font-size="16" fill="#64748b" text-anchor="end">Santiago, Chile</text>
+
+  <!-- Bottom accent -->
+  <rect x="0" y="626" width="1200" height="4" fill="#00c1c1"/>
+</svg>
