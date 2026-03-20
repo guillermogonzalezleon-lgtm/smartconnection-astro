@@ -2,13 +2,299 @@
 export const prerender = false;
 
 import { verifySession } from '../api/auth';
+import IntranetLayout from '../../layouts/IntranetLayout.astro';
 
 const session = verifySession(Astro.cookies.get('sc_session')?.value);
 const isAuth = session.valid;
 const user = session.user || '';
 ---
 
-<!DOCTYPE html>
+{isAuth ? (
+<IntranetLayout title="Dashboard" activePage="dashboard">
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--teal)"><i class="bi bi-robot"></i></div>
+      <div class="kpi-value" id="kpiAgents">0</div>
+      <div class="kpi-label">Agentes Activos</div>
+      <div class="kpi-accent" style="background:var(--teal)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--violet)"><i class="bi bi-lightning-charge"></i></div>
+      <div class="kpi-value" id="kpiTasks">0</div>
+      <div class="kpi-label">Tareas Hoy</div>
+      <div class="kpi-accent" style="background:var(--violet)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--blue)"><i class="bi bi-people"></i></div>
+      <div class="kpi-value" id="kpiLeads">0</div>
+      <div class="kpi-label">Leads Nuevos</div>
+      <div class="kpi-accent" style="background:var(--blue)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--amber)"><i class="bi bi-calendar-check"></i></div>
+      <div class="kpi-value" id="kpiMeetings">0</div>
+      <div class="kpi-label">Reuniones</div>
+      <div class="kpi-accent" style="background:var(--amber)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--green)"><i class="bi bi-rocket-takeoff"></i></div>
+      <div class="kpi-value" id="kpiDeploy" style="font-size:0.95rem">—</div>
+      <div class="kpi-label">Último Deploy</div>
+      <div class="kpi-accent" style="background:var(--green)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--orange)"><i class="bi bi-coin"></i></div>
+      <div class="kpi-value" id="kpiTokens">0</div>
+      <div class="kpi-label">Tokens IA Hoy</div>
+      <div class="kpi-accent" style="background:var(--orange)"></div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-60-40" style="margin-bottom:1.5rem">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="bi bi-activity"></i> Actividad 7 días</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:220px">
+          <canvas id="activityChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="bi bi-pie-chart"></i> Tareas por Agente</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:220px">
+          <canvas id="agentDonut"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agents Table + Live Feed -->
+  <div class="grid-60-40" style="margin-bottom:1.5rem">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="bi bi-robot"></i> Agentes IA — Estado</h3>
+        <a href="/intranet/agents" class="btn btn-sm">Ver todos <i class="bi bi-arrow-right"></i></a>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="data-table">
+          <thead>
+            <tr><th>Agente</th><th>Modelo</th><th>Estado</th><th>Tareas</th><th>Última act.</th></tr>
+          </thead>
+          <tbody id="agentsTableBody">
+            <tr><td colspan="5" class="empty-state"><p>Cargando...</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="bi bi-terminal"></i> Live Feed</h3>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="terminal" id="liveFeed" style="border:none;border-radius:0;max-height:280px">
+          <div class="log-line"><span class="log-time">--:--:--</span><span class="log-tag info">INFO</span><span class="log-msg">Esperando actividad...</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deploy Panel -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="bi bi-rocket-takeoff"></i> Deploy Rápido</h3>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-primary btn-sm" onclick="triggerDeploy('all')"><i class="bi bi-play-fill"></i> Deploy Todo</button>
+        <button class="btn btn-sm" onclick="triggerDeploy('vercel')"><i class="bi bi-triangle-fill" style="font-size:0.5rem"></i> Vercel</button>
+        <button class="btn btn-orange btn-sm" onclick="triggerDeploy('aws')"><i class="bi bi-cloud"></i> AWS</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="terminal" id="deployLog" style="border:none;border-radius:0;max-height:160px">
+        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-tag info">INFO</span><span class="log-msg">Listo para deploy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    var agentColors = {
+      claude: { color: '#00e5b0', icon: 'bi-robot' },
+      groq: { color: '#f59e0b', icon: 'bi-cpu' },
+      grok: { color: '#8b5cf6', icon: 'bi-lightning-charge' },
+      gemini: { color: '#22c55e', icon: 'bi-gem' },
+      deployer: { color: '#3b82f6', icon: 'bi-gear-wide-connected' },
+    };
+
+    function api(payload) {
+      return fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function(r) { return r.json(); });
+    }
+
+    // --- Load Dashboard ---
+    function refreshPage() {
+      loadAgents();
+      loadLogs();
+      loadKpis();
+    }
+
+    function loadAgents() {
+      api({ action: 'list' }).then(function(d) {
+        if (!d.agents) return;
+        var agents = d.agents;
+        var active = agents.filter(function(a) { return a.active; }).length;
+        var totalTasks = agents.reduce(function(s, a) { return s + (a.tasks_count || 0); }, 0);
+        document.getElementById('kpiAgents').textContent = active;
+        document.getElementById('kpiTasks').textContent = totalTasks;
+        document.getElementById('kpiDeploy').textContent = new Date().toLocaleDateString('es-CL');
+
+        // Agents table
+        var tbody = document.getElementById('agentsTableBody');
+        tbody.innerHTML = agents.map(function(a) {
+          var c = agentColors[a.agent_id] || { color: '#94a3b8', icon: 'bi-cpu' };
+          var statusClass = a.active ? 'badge-green' : 'badge-amber';
+          var statusText = a.active ? 'Activo' : 'Standby';
+          return '<tr>' +
+            '<td><span style="color:' + c.color + '"><i class="bi ' + c.icon + '"></i></span> ' + (a.name || a.agent_id) + '</td>' +
+            '<td class="mono">' + (a.model || '—') + '</td>' +
+            '<td><span class="badge-pill ' + statusClass + '"><span class="dot dot-' + (a.active ? 'active' : 'standby') + '" style="width:6px;height:6px"></span> ' + statusText + '</span></td>' +
+            '<td>' + (a.tasks_count || 0) + '</td>' +
+            '<td class="mono" style="font-size:0.65rem">' + (a.updated_at ? new Date(a.updated_at).toLocaleString('es-CL', {hour:'2-digit',minute:'2-digit'}) : '—') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        // Donut chart
+        renderDonut(agents);
+      });
+    }
+
+    function loadLogs() {
+      var ids = ['claude', 'groq', 'grok', 'gemini', 'deployer'];
+      Promise.all(ids.map(function(id) { return api({ action: 'logs', agentId: id }); }))
+        .then(function(results) {
+          var allLogs = [];
+          results.forEach(function(r) { if (r.logs) allLogs = allLogs.concat(r.logs); });
+          allLogs.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+          renderLiveFeed(allLogs.slice(0, 15));
+        });
+    }
+
+    function loadKpis() {
+      api({ action: 'query', table: 'leads', limit: 1000 }).then(function(d) {
+        if (d.data) document.getElementById('kpiLeads').textContent = d.data.length;
+      }).catch(function(){});
+      api({ action: 'query', table: 'reuniones', limit: 1000 }).then(function(d) {
+        if (d.data) document.getElementById('kpiMeetings').textContent = d.data.length;
+      }).catch(function(){});
+    }
+
+    function renderLiveFeed(logs) {
+      var feed = document.getElementById('liveFeed');
+      if (!logs || logs.length === 0) return;
+      feed.innerHTML = logs.map(function(l) {
+        var time = l.created_at ? new Date(l.created_at).toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--:--:--';
+        var tagClass = l.status === 'error' ? 'error' : (l.action === 'toggle' ? 'info' : 'build');
+        var agent = (l.agent_name || l.agent_id || '').toUpperCase().substring(0, 6);
+        return '<div class="log-line"><span class="log-time">' + time + '</span><span class="log-tag ' + tagClass + '">' + agent + '</span><span class="log-msg">' + (l.detail || l.action || '').substring(0, 80) + '</span></div>';
+      }).join('');
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function renderDonut(agents) {
+      var canvas = document.getElementById('agentDonut');
+      if (!canvas || typeof Chart === 'undefined') return;
+      var existing = Chart.getChart(canvas);
+      if (existing) existing.destroy();
+
+      var labels = agents.map(function(a) { return a.name || a.agent_id; });
+      var data = agents.map(function(a) { return a.tasks_count || 1; });
+      var colors = agents.map(function(a) { return (agentColors[a.agent_id] || {}).color || '#475569'; });
+
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+        options: {
+          cutout: '65%',
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
+          },
+        },
+      });
+    }
+
+    // Activity chart (mock data for now)
+    function renderActivityChart() {
+      var canvas = document.getElementById('activityChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      var existing = Chart.getChart(canvas);
+      if (existing) existing.destroy();
+
+      var days = [];
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date(); d.setDate(d.getDate() - i);
+        days.push(d.toLocaleDateString('es-CL', { weekday: 'short' }));
+      }
+
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [
+            { label: 'Leads', data: [2, 1, 3, 0, 4, 2, 1], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 },
+            { label: 'Tareas', data: [5, 3, 8, 2, 6, 4, 3], borderColor: '#00e5b0', backgroundColor: 'rgba(0,229,176,0.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 },
+          ],
+        },
+        options: {
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' } },
+          },
+          plugins: { legend: { position: 'top', align: 'end' } },
+          interaction: { intersect: false, mode: 'index' },
+        },
+      });
+    }
+
+    // Deploy trigger
+    function triggerDeploy(target) {
+      var log = document.getElementById('deployLog');
+      var now = new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      log.innerHTML += '<div class="log-line new"><span class="log-time">' + now + '</span><span class="log-tag push">DEPLOY</span><span class="log-msg">Disparando deploy ' + target + '...</span></div>';
+      log.scrollTop = log.scrollHeight;
+
+      api({ action: 'execute', agentId: 'deployer', prompt: 'Deploy ' + target, taskType: 'general' })
+        .then(function(d) {
+          var t = new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          var tag = d.success ? 'ok' : 'error';
+          var msg = d.success ? 'Deploy disparado via GitHub Actions' : (d.error || d.result || 'Error');
+          log.innerHTML += '<div class="log-line new"><span class="log-time">' + t + '</span><span class="log-tag ' + tag + '">' + tag.toUpperCase() + '</span><span class="log-msg">' + msg + '</span></div>';
+          log.scrollTop = log.scrollHeight;
+        });
+    }
+
+    // Polling
+    var pollInterval;
+    function startPolling() { refreshPage(); pollInterval = setInterval(refreshPage, 10000); }
+    function stopPolling() { clearInterval(pollInterval); }
+    document.addEventListener('visibilitychange', function() {
+      document.hidden ? stopPolling() : startPolling();
+    });
+
+    // Init
+    startPolling();
+    setTimeout(renderActivityChart, 300);
+  </script>
+</IntranetLayout>
+) : (
+<!-- Login Screen -->
 <html lang="es-CL">
 <head>
   <meta charset="utf-8">
@@ -20,640 +306,85 @@ const user = session.user || '';
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --primary: #00c1c1;
-      --primary-light: #00e5e5;
-      --gold: #f0ab00;
-      --bg: #0a0e17;
-      --bg2: #111827;
-      --bg3: #1a2332;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-    }
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    ::selection { background: rgba(0,193,193,0.3); color: #fff; }
-
-    /* Login */
-    .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
-    .login-card { background: rgba(17,24,39,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0,193,193,0.15); border-radius: 20px; padding: 3rem; max-width: 420px; width: 100%; text-align: center; }
-    .login-card h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
-    .login-card p { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    :root { --teal: #00e5b0; --teal-dim: rgba(0,229,176,0.12); --bg: #0a0d14; --bg2: #111827; --text: #f1f5f9; --muted: #94a3b8; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .login-card { background: rgba(17,24,39,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0,229,176,0.12); border-radius: 20px; padding: 3rem; max-width: 400px; width: 100%; text-align: center; }
+    .login-card img { height: 40px; margin-bottom: 1.5rem; }
+    .login-card h1 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .login-card p { color: var(--muted); font-size: 0.8rem; margin-bottom: 2rem; }
     .pin-container { display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 1.5rem; }
-    .pin-digit { width: 52px; height: 60px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 14px; color: #fff; font-size: 1.5rem; font-weight: 800; text-align: center; outline: none; transition: all 0.2s; caret-color: var(--primary); }
-    .pin-digit:focus { border-color: var(--primary); background: rgba(0,193,193,0.05); box-shadow: 0 0 20px rgba(0,193,193,0.15); }
-    .pin-digit.filled { border-color: var(--primary); }
-    .pin-digit.error { border-color: #ef4444; animation: pinShake 0.4s ease; }
+    .pin-digit { width: 56px; height: 64px; background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08); border-radius: 14px; color: #fff; font-size: 1.5rem; font-weight: 800; text-align: center; outline: none; transition: all 0.2s; caret-color: var(--teal); }
+    .pin-digit:focus { border-color: var(--teal); background: var(--teal-dim); box-shadow: 0 0 24px rgba(0,229,176,0.15); }
+    .pin-digit.filled { border-color: var(--teal); }
+    .pin-digit.error { border-color: #ef4444; animation: shake 0.4s ease; }
     .pin-digit.success { border-color: #22c55e; background: rgba(34,197,94,0.1); }
-    .pin-status { font-size: 0.8rem; color: var(--muted); min-height: 1.5rem; margin-bottom: 1rem; transition: all 0.3s; }
+    .pin-status { font-size: 0.75rem; color: var(--muted); min-height: 1.5rem; }
     .pin-status.error { color: #ef4444; }
     .pin-status.success { color: #22c55e; }
-    .pin-dots { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
-    .pin-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: all 0.3s; }
-    .pin-dot.active { background: var(--primary); box-shadow: 0 0 10px rgba(0,193,193,0.4); }
-    @keyframes pinShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-    .login-btn:hover { background: var(--primary-light); }
-    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .login-error { color: #ef4444; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
-
-    /* Dashboard */
-    .dashboard { display: none; }
-    .dashboard.active { display: block; }
-    .topbar { background: var(--bg2); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1rem 2rem; display: flex; align-items: center; justify-content: between; gap: 1rem; }
-    .topbar-left { display: flex; align-items: center; gap: 1rem; flex: 1; }
-    .topbar-right { display: flex; align-items: center; gap: 1rem; }
-    .topbar img { height: 32px; }
-    .topbar .badge { background: var(--primary); color: var(--bg); font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; }
-    .user-name { color: var(--muted); font-size: 0.8rem; }
-    .logout-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--muted); padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
-    .logout-btn:hover { border-color: #ef4444; color: #ef4444; }
-
-    .main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-    .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .section-title i { color: var(--primary); }
-
-    /* Agents Grid */
-    .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem; }
-    .agent-card { background: var(--bg2); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 0; transition: all 0.3s; position: relative; overflow: hidden; }
-    .agent-card:hover { border-color: rgba(0,193,193,0.25); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
-    .agent-card .agent-accent { height: 4px; width: 100%; border-radius: 20px 20px 0 0; }
-    .agent-card .agent-body { padding: 1.5rem; }
-    .agent-card .agent-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-    .agent-card .agent-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.06); }
-    .agent-card .agent-name { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; }
-    .agent-card .agent-provider { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
-    .agent-card .agent-role { color: var(--muted); font-size: 0.75rem; font-weight: 500; }
-    .agent-card .agent-desc { color: var(--muted); font-size: 0.8rem; line-height: 1.6; margin-bottom: 1.25rem; min-height: 2.5rem; }
-    .agent-card .agent-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.04); }
-    .agent-card .agent-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 500; }
-    .agent-card .agent-tasks { color: var(--muted); font-size: 0.7rem; display: flex; align-items: center; gap: 0.3rem; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .status-dot.active { background: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,0.6); animation: pulse-dot 2s infinite; }
-    .status-dot.standby { background: var(--gold); box-shadow: 0 0 10px rgba(240,171,0,0.4); }
-    .status-dot.offline { background: #475569; }
-    @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
-    .agent-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
-    .agent-btn { flex: 1; padding: 0.6rem 0.5rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: var(--text); font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
-    .agent-btn:hover { border-color: var(--primary); color: var(--primary); }
-    .agent-btn.primary { background: rgba(0,193,193,0.1); border-color: rgba(0,193,193,0.3); color: var(--primary); }
-    .agent-btn.primary:hover { background: rgba(0,193,193,0.2); }
-
-    /* Activity Log */
-    .activity-log { background: var(--bg2); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; }
-    .log-entry { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .log-entry:last-child { border-bottom: none; }
-    .log-time { color: var(--muted); font-size: 0.7rem; min-width: 60px; padding-top: 2px; }
-    .log-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
-    .log-content { flex: 1; }
-    .log-content strong { font-size: 0.8rem; }
-    .log-content p { color: var(--muted); font-size: 0.75rem; margin-top: 0.2rem; }
-
-    /* Modals */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: var(--bg2); border: 1px solid rgba(0,193,193,0.2); border-radius: 16px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
-    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .modal h3 i { color: var(--primary); }
-    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.25rem; cursor: pointer; margin-left: auto; }
-    .modal-close:hover { color: #fff; }
-    .modal label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; margin-top: 1rem; }
-    .modal select, .modal textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.75rem 1rem; color: #fff; font-size: 0.875rem; font-family: inherit; outline: none; transition: border 0.2s; }
-    .modal select:focus, .modal textarea:focus { border-color: var(--primary); }
-    .modal textarea { min-height: 100px; resize: vertical; }
-    .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
-    .modal-btn { flex: 1; padding: 0.75rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
-    .modal-btn.cancel { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid rgba(255,255,255,0.1); }
-    .modal-btn.cancel:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
-    .modal-btn.submit { background: var(--primary); color: var(--bg); }
-    .modal-btn.submit:hover { background: var(--primary-light); }
-    .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .result-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 1rem; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; margin-top: 1rem; }
-    .result-box.error { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
-
-    /* Quick Stats */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
-    .stat-card { background: var(--bg2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; }
-    .stat-card .stat-label { color: var(--muted); font-size: 0.75rem; margin-bottom: 0.5rem; }
-    .stat-card .stat-value { font-size: 1.75rem; font-weight: 800; color: var(--primary); }
-    .stat-card .stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
   </style>
 </head>
 <body>
-  <!-- Login Screen -->
-  <div class="login-container" id="loginScreen" style={isAuth ? 'display:none' : ''}>
-    <div class="login-card">
-      <div style="text-align:center;margin-bottom:1.5rem;">
-        <img src="/img/logo_smart.svg" alt="Smart Connection" style="height:48px;">
-      </div>
-      <h1>Intranet</h1>
-      <p>Ingresa tu PIN de acceso</p>
-      <div class="pin-container" id="pinContainer">
-        <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="0">
-        <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="1">
-        <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="2">
-        <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="3">
-      </div>
-      <div class="pin-dots">
-        <span class="pin-dot" data-dot="0"></span>
-        <span class="pin-dot" data-dot="1"></span>
-        <span class="pin-dot" data-dot="2"></span>
-        <span class="pin-dot" data-dot="3"></span>
-      </div>
-      <div class="pin-status" id="pinStatus"><i class="bi bi-shield-lock"></i> 4 caracteres</div>
+  <div class="login-card">
+    <img src="/img/logo_smart.svg" alt="Smart Connection">
+    <h1>Intranet</h1>
+    <p>Ingresa tu PIN de acceso</p>
+    <div class="pin-container" id="pinContainer">
+      <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="0">
+      <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="1">
+      <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="2">
+      <input type="password" class="pin-digit" maxlength="1" autocomplete="off" data-index="3">
     </div>
+    <div class="pin-status" id="pinStatus"><i class="bi bi-shield-lock"></i> 4 caracteres</div>
   </div>
-
-  <!-- Dashboard -->
-  <div class="dashboard" id="dashboard" style={isAuth ? 'display:block' : ''}>
-    <div class="topbar">
-      <div class="topbar-left">
-        <img src="/img/logo_smart.svg" alt="Smart Connection">
-        <span class="badge">INTRANET</span>
-        <nav style="display:flex;gap:1rem;margin-left:2rem">
-          <a href="/intranet" style="color:var(--primary);font-size:0.8rem;text-decoration:none;padding:0.4rem 0.8rem;border-radius:8px;background:rgba(0,193,193,0.1)">Dashboard</a>
-          <a href="/intranet/leads" style="color:var(--muted);font-size:0.8rem;text-decoration:none;padding:0.4rem 0.8rem;border-radius:8px">Leads</a>
-          <a href="/intranet/analytics" style="color:var(--muted);font-size:0.8rem;text-decoration:none;padding:0.4rem 0.8rem;border-radius:8px">Analytics</a>
-        </nav>
-      </div>
-      <div class="topbar-right">
-        <span class="user-name" id="userName">{isAuth ? user : ''}</span>
-        <button class="logout-btn" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Salir</button>
-      </div>
-    </div>
-
-    <div class="main">
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Agentes Activos</div>
-          <div class="stat-value" id="activeCount">0</div>
-          <div class="stat-sub">de 5 configurados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Tareas Hoy</div>
-          <div class="stat-value" id="tasksCount">0</div>
-          <div class="stat-sub">completadas</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Último Deploy</div>
-          <div class="stat-value" style="font-size:1rem;" id="lastDeploy">—</div>
-          <div class="stat-sub">Vercel + AWS</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Uptime</div>
-          <div class="stat-value">99%</div>
-          <div class="stat-sub">últimos 30 días</div>
-        </div>
-      </div>
-
-      <!-- Agents -->
-      <h2 class="section-title"><i class="bi bi-robot"></i> Agentes IA</h2>
-      <div class="agents-grid" id="agentsGrid"></div>
-
-      <!-- Activity Log -->
-      <h2 class="section-title"><i class="bi bi-activity"></i> Actividad Reciente</h2>
-      <div class="activity-log" id="activityLog"></div>
-    </div>
-  </div>
-
-  <!-- Prompt Modal -->
-  <div class="modal-overlay" id="promptModal">
-    <div class="modal">
-      <h3><i class="bi bi-terminal"></i> Ejecutar <span id="promptAgentName"></span> <button class="modal-close" onclick="closeModal('promptModal')">&times;</button></h3>
-      <label for="taskTypeSelect">Tipo de tarea</label>
-      <select id="taskTypeSelect">
-        <option value="general">General</option>
-        <option value="code-review">Code Review</option>
-        <option value="content">Contenido & Copy</option>
-        <option value="seo">SEO & Analytics</option>
-        <option value="research">Research & Analisis</option>
-      </select>
-      <label for="promptInput">Prompt</label>
-      <textarea id="promptInput" placeholder="Escribe tu instruccion para el agente..."></textarea>
-      <div class="modal-actions">
-        <button class="modal-btn cancel" onclick="closeModal('promptModal')">Cancelar</button>
-        <button class="modal-btn submit" id="executeBtn" onclick="executeAgent()"><i class="bi bi-play-fill"></i> Ejecutar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Result Modal -->
-  <div class="modal-overlay" id="resultModal">
-    <div class="modal">
-      <h3><i class="bi bi-chat-square-text"></i> Resultado — <span id="resultAgentName"></span> <button class="modal-close" onclick="closeModal('resultModal')">&times;</button></h3>
-      <div class="result-box" id="resultContent"></div>
-      <div class="modal-actions">
-        <button class="modal-btn cancel" onclick="closeModal('resultModal')">Cerrar</button>
-        <button class="modal-btn submit" onclick="copyResult()"><i class="bi bi-clipboard"></i> Copiar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Logs Modal -->
-  <div class="modal-overlay" id="logsModal">
-    <div class="modal">
-      <h3><i class="bi bi-clock-history"></i> Logs — <span id="logsAgentName"></span> <button class="modal-close" onclick="closeModal('logsModal')">&times;</button></h3>
-      <div id="logsContent"></div>
-      <div class="modal-actions">
-        <button class="modal-btn cancel" onclick="closeModal('logsModal')">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
   <script is:inline>
-    // --- State ---
-    var agents = [];
-    var currentAgentId = null;
+    var pinDigits = document.querySelectorAll('.pin-digit');
+    var pinStatus = document.getElementById('pinStatus');
+    var pinLocked = false;
+    if (pinDigits.length) pinDigits[0].focus();
 
-    // Fallback agent display config (icons/colors) when Supabase doesn't provide them
-    var agentDisplay = {
-      claude: { icon: 'bi-robot', color: '#d97706', bgColor: 'rgba(217,119,6,0.1)' },
-      groq: { icon: 'bi-cpu', color: '#f97316', bgColor: 'rgba(249,115,22,0.1)' },
-      grok: { icon: 'bi-lightning-charge', color: '#8b5cf6', bgColor: 'rgba(139,92,246,0.1)' },
-      gemini: { icon: 'bi-gem', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.1)' },
-      deployer: { icon: 'bi-gear-wide-connected', color: '#00c1c1', bgColor: 'rgba(0,193,193,0.1)' },
-    };
-
-    // --- API helper ---
-    function agentAPI(payload) {
-      return fetch('/api/agents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
-    }
-
-    // --- Load agents from Supabase ---
-    function loadAgents() {
-      agentAPI({ action: 'list' }).then(function(res) {
-        if (res.ok && res.data.agents && Array.isArray(res.data.agents)) {
-          agents = res.data.agents;
-          renderAgents();
-        } else {
-          console.error('Error cargando agentes:', res.data);
-        }
-      }).catch(function(err) {
-        console.error('Error cargando agentes:', err);
+    pinDigits.forEach(function(input, idx) {
+      input.addEventListener('input', function() {
+        var val = this.value.replace(/[^0-9a-zA-Z]/g, '');
+        this.value = val ? val[0] : '';
+        if (this.value) {
+          this.classList.add('filled');
+          if (idx < pinDigits.length - 1) pinDigits[idx + 1].focus();
+          var pin = '';
+          pinDigits.forEach(function(d) { pin += d.value; });
+          if (pin.length === 4 && !pinLocked) { pinLocked = true; pinStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...'; submitPin(pin); }
+        } else { this.classList.remove('filled'); }
       });
-    }
-
-    // --- Load activity logs (all agents, most recent) ---
-    function loadActivity() {
-      // Load logs for all known agent IDs
-      var logPromises = ['claude', 'groq', 'grok', 'gemini', 'deployer'].map(function(id) {
-        return agentAPI({ action: 'logs', agentId: id });
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !this.value && idx > 0) { pinDigits[idx - 1].focus(); pinDigits[idx - 1].value = ''; pinDigits[idx - 1].classList.remove('filled'); }
       });
-      Promise.all(logPromises).then(function(results) {
-        var allLogs = [];
-        results.forEach(function(res) {
-          if (res.ok && res.data.logs && Array.isArray(res.data.logs)) {
-            allLogs = allLogs.concat(res.data.logs);
-          }
-        });
-        // Sort by created_at desc
-        allLogs.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
-        renderActivity(allLogs.slice(0, 10));
-      }).catch(function() {
-        renderActivity([]);
-      });
-    }
-
-    // --- Render agents ---
-    function renderAgents() {
-      var grid = document.getElementById('agentsGrid');
-      if (!grid) return;
-      var activeCount = 0;
-      var totalTasks = 0;
-
-      grid.innerHTML = agents.map(function(a) {
-        var isActive = a.active;
-        if (isActive) activeCount++;
-        totalTasks += (a.tasks_count || 0);
-        var display = agentDisplay[a.agent_id] || { icon: 'bi-cpu', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.1)' };
-        var icon = a.icon || display.icon;
-        var color = a.color || display.color;
-        var bgColor = a.bg_color || display.bgColor;
-        var statusClass = isActive ? 'active' : 'standby';
-        var statusLabel = isActive ? 'Activo' : 'En espera';
-        var role = a.role || '';
-        var desc = a.description || '';
-        var name = a.name || a.agent_id;
-
-        var provider = a.provider || '';
-
-        return '<div class="agent-card">' +
-          '<div class="agent-accent" style="background:' + color + '"></div>' +
-          '<div class="agent-body">' +
-            '<div class="agent-header">' +
-              '<div class="agent-icon" style="background:' + bgColor + ';color:' + color + ';box-shadow:0 4px 15px ' + bgColor + '"><i class="bi ' + icon + '"></i></div>' +
-              '<div>' +
-                '<div class="agent-name">' + name + '</div>' +
-                '<div class="agent-provider">' + provider + '</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="agent-role" style="margin-bottom:0.5rem">' + role + '</div>' +
-            '<div class="agent-desc">' + desc + '</div>' +
-            '<div class="agent-footer">' +
-              '<div class="agent-status">' +
-                '<span class="status-dot ' + statusClass + '"></span>' +
-                '<span style="color:' + (isActive ? '#22c55e' : 'var(--gold)') + '">' + statusLabel + '</span>' +
-              '</div>' +
-              '<div class="agent-tasks"><i class="bi bi-lightning-charge"></i> ' + (a.tasks_count || 0) + ' tareas</div>' +
-            '</div>' +
-            '<div class="agent-actions">' +
-              '<button class="agent-btn primary" onclick="toggleAgent(\'' + a.agent_id + '\')"><i class="bi ' + (isActive ? 'bi-pause-fill' : 'bi-play-fill') + '"></i> ' + (isActive ? 'Pausar' : 'Activar') + '</button>' +
-              '<button class="agent-btn" onclick="openExecuteModal(\'' + a.agent_id + '\',\'' + name + '\')"><i class="bi bi-send"></i> Ejecutar</button>' +
-              '<button class="agent-btn" onclick="showLogs(\'' + a.agent_id + '\',\'' + name + '\')"><i class="bi bi-terminal"></i> Logs</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-
-      document.getElementById('activeCount').textContent = activeCount;
-      var subEl = document.querySelector('.stat-card .stat-sub');
-      if (subEl) subEl.textContent = 'de ' + agents.length + ' configurados';
-      document.getElementById('tasksCount').textContent = totalTasks;
-      document.getElementById('lastDeploy').textContent = new Date().toLocaleDateString('es-CL');
-    }
-
-    // --- Render activity ---
-    function renderActivity(logs) {
-      var log = document.getElementById('activityLog');
-      if (!log) return;
-      if (!logs || logs.length === 0) {
-        log.innerHTML = '<div class="log-entry"><span class="log-time"></span><div class="log-content"><p style="color:var(--muted)">Sin actividad reciente</p></div></div>';
-        return;
-      }
-      log.innerHTML = logs.map(function(entry) {
-        var display = agentDisplay[entry.agent_id] || { icon: 'bi-cpu', color: 'rgba(148,163,184,0.1)' };
-        var timeAgo = getTimeAgo(entry.created_at);
-        return '<div class="log-entry">' +
-          '<span class="log-time">' + timeAgo + '</span>' +
-          '<div class="log-icon" style="background:' + (display.bgColor || 'rgba(148,163,184,0.1)') + '"><i class="bi ' + display.icon + '"></i></div>' +
-          '<div class="log-content"><strong>' + (entry.agent_name || entry.agent_id) + '</strong> <span style="color:var(--muted);font-size:0.7rem">(' + (entry.action || '') + ')</span><p>' + escapeHtml(entry.detail || '') + '</p></div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function getTimeAgo(dateStr) {
-      if (!dateStr) return '';
-      var diff = Date.now() - new Date(dateStr).getTime();
-      var mins = Math.floor(diff / 60000);
-      if (mins < 1) return 'Ahora';
-      if (mins < 60) return mins + 'm';
-      var hours = Math.floor(mins / 60);
-      if (hours < 24) return hours + 'h';
-      var days = Math.floor(hours / 24);
-      return days + 'd';
-    }
-
-    function escapeHtml(str) {
-      var div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    // --- Toggle agent via API ---
-    function toggleAgent(id) {
-      agentAPI({ action: 'toggle', agentId: id }).then(function(res) {
-        if (res.ok && res.data.success) {
-          // Update local state
-          for (var i = 0; i < agents.length; i++) {
-            if (agents[i].agent_id === id) {
-              agents[i].active = res.data.active;
-              break;
-            }
-          }
-          renderAgents();
-        } else {
-          alert(res.data.error || 'Error al cambiar estado del agente');
-        }
-      }).catch(function() {
-        alert('Error de conexion');
-      });
-    }
-
-    // --- Modal helpers ---
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('active');
-    }
-
-    function openExecuteModal(agentId, agentName) {
-      currentAgentId = agentId;
-      document.getElementById('promptAgentName').textContent = agentName;
-      document.getElementById('promptInput').value = '';
-      document.getElementById('taskTypeSelect').value = 'general';
-      document.getElementById('executeBtn').disabled = false;
-      document.getElementById('executeBtn').innerHTML = '<i class="bi bi-play-fill"></i> Ejecutar';
-      document.getElementById('promptModal').classList.add('active');
-      document.getElementById('promptInput').focus();
-    }
-
-    // --- Execute agent ---
-    function executeAgent() {
-      var prompt = document.getElementById('promptInput').value.trim();
-      if (!prompt) {
-        document.getElementById('promptInput').focus();
-        return;
-      }
-      var taskType = document.getElementById('taskTypeSelect').value;
-      var btn = document.getElementById('executeBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Procesando...';
-
-      agentAPI({ action: 'execute', agentId: currentAgentId, prompt: prompt, taskType: taskType })
-        .then(function(res) {
-          closeModal('promptModal');
-          var agentName = '';
-          for (var i = 0; i < agents.length; i++) {
-            if (agents[i].agent_id === currentAgentId) { agentName = agents[i].name; break; }
-          }
-          document.getElementById('resultAgentName').textContent = agentName;
-          var resultBox = document.getElementById('resultContent');
-          if (res.ok && res.data.success) {
-            resultBox.textContent = res.data.result;
-            resultBox.className = 'result-box';
-          } else {
-            resultBox.textContent = res.data.error || 'Error desconocido';
-            resultBox.className = 'result-box error';
-          }
-          document.getElementById('resultModal').classList.add('active');
-          // Refresh logs
-          loadActivity();
-        })
-        .catch(function() {
-          closeModal('promptModal');
-          document.getElementById('resultAgentName').textContent = '';
-          var resultBox = document.getElementById('resultContent');
-          resultBox.textContent = 'Error de conexion con el servidor';
-          resultBox.className = 'result-box error';
-          document.getElementById('resultModal').classList.add('active');
-        });
-    }
-
-    // --- Copy result ---
-    function copyResult() {
-      var text = document.getElementById('resultContent').textContent;
-      navigator.clipboard.writeText(text).then(function() {
-        var btn = document.querySelector('#resultModal .modal-btn.submit');
-        btn.innerHTML = '<i class="bi bi-check"></i> Copiado';
-        setTimeout(function() { btn.innerHTML = '<i class="bi bi-clipboard"></i> Copiar'; }, 1500);
-      });
-    }
-
-    // --- Show logs modal ---
-    function showLogs(agentId, agentName) {
-      document.getElementById('logsAgentName').textContent = agentName;
-      document.getElementById('logsContent').innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Cargando...</p>';
-      document.getElementById('logsModal').classList.add('active');
-
-      agentAPI({ action: 'logs', agentId: agentId }).then(function(res) {
-        var container = document.getElementById('logsContent');
-        if (res.ok && res.data.logs && res.data.logs.length > 0) {
-          container.innerHTML = res.data.logs.map(function(l) {
-            var statusColor = l.status === 'error' ? '#ef4444' : '#22c55e';
-            return '<div class="log-entry">' +
-              '<span class="log-time">' + getTimeAgo(l.created_at) + '</span>' +
-              '<span style="color:' + statusColor + ';font-size:0.7rem;min-width:50px">' + (l.status || 'ok') + '</span>' +
-              '<div class="log-content"><strong>' + (l.action || '') + '</strong><p>' + escapeHtml(l.detail || '') + '</p></div>' +
-            '</div>';
-          }).join('');
-        } else {
-          container.innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Sin logs para este agente</p>';
-        }
-      }).catch(function() {
-        document.getElementById('logsContent').innerHTML = '<p style="color:#ef4444;font-size:0.8rem">Error cargando logs</p>';
-      });
-    }
-
-    // --- Close modals on overlay click ---
-    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) overlay.classList.remove('active');
+      input.addEventListener('paste', function(e) {
+        e.preventDefault();
+        var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9a-zA-Z]/g, '');
+        for (var i = 0; i < Math.min(pasted.length, 4); i++) { pinDigits[i].value = pasted[i]; pinDigits[i].classList.add('filled'); }
+        if (pasted.length >= 4 && !pinLocked) { pinLocked = true; pinStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...'; submitPin(pasted.substring(0, 4)); }
       });
     });
 
-    // --- PIN Auth ---
-    var pinDigits = document.querySelectorAll('.pin-digit');
-    var pinDots = document.querySelectorAll('.pin-dot');
-    var pinStatus = document.getElementById('pinStatus');
-    var pinLocked = false;
-
-    if (pinDigits.length) {
-      pinDigits[0].focus();
-
-      pinDigits.forEach(function(input, idx) {
-        input.addEventListener('input', function() {
-          var val = this.value.replace(/[^0-9a-zA-Z]/g, '');
-          this.value = val ? val[0] : '';
-
-          if (this.value) {
-            this.classList.add('filled');
-            if (pinDots[idx]) pinDots[idx].classList.add('active');
-
-            // Move to next
-            if (idx < pinDigits.length - 1) {
-              pinDigits[idx + 1].focus();
-            }
-
-            // Check if all filled — auto-submit
-            var pin = '';
-            pinDigits.forEach(function(d) { pin += d.value; });
-            if (pin.length === 4 && !pinLocked) {
-              pinLocked = true;
-              pinStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
-              pinStatus.className = 'pin-status';
-              submitPin(pin);
-            }
-          } else {
-            this.classList.remove('filled');
-            if (pinDots[idx]) pinDots[idx].classList.remove('active');
-          }
-        });
-
-        input.addEventListener('keydown', function(e) {
-          if (e.key === 'Backspace' && !this.value && idx > 0) {
-            pinDigits[idx - 1].focus();
-            pinDigits[idx - 1].value = '';
-            pinDigits[idx - 1].classList.remove('filled');
-            if (pinDots[idx - 1]) pinDots[idx - 1].classList.remove('active');
-          }
-        });
-
-        // Allow paste
-        input.addEventListener('paste', function(e) {
-          e.preventDefault();
-          var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9a-zA-Z]/g, '');
-          for (var i = 0; i < Math.min(pasted.length, 4); i++) {
-            pinDigits[i].value = pasted[i];
-            pinDigits[i].classList.add('filled');
-            if (pinDots[i]) pinDots[i].classList.add('active');
-          }
-          if (pasted.length >= 4 && !pinLocked) {
-            pinLocked = true;
-            pinStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
-            submitPin(pasted.substring(0, 4));
-          } else if (pasted.length < 4) {
-            pinDigits[Math.min(pasted.length, 3)].focus();
-          }
-        });
-      });
-    }
-
     function submitPin(pin) {
-      fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pin }),
-      })
-      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-      .then(function(res) {
-        if (res.ok && res.data.success) {
-          pinDigits.forEach(function(d) { d.classList.add('success'); });
-          pinStatus.innerHTML = '<i class="bi bi-check-circle"></i> Bienvenido';
-          pinStatus.className = 'pin-status success';
-          setTimeout(function() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('userName').textContent = res.data.user.name;
-            loadAgents();
-            loadActivity();
-          }, 500);
-        } else {
-          pinDigits.forEach(function(d) { d.classList.add('error'); d.value = ''; });
-          pinDots.forEach(function(d) { d.classList.remove('active'); });
-          pinStatus.innerHTML = '<i class="bi bi-x-circle"></i> PIN incorrecto';
-          pinStatus.className = 'pin-status error';
-          setTimeout(function() {
-            pinDigits.forEach(function(d) { d.classList.remove('error', 'filled'); });
-            pinStatus.innerHTML = '<i class="bi bi-shield-lock"></i> 4 caracteres';
-            pinStatus.className = 'pin-status';
-            pinLocked = false;
-            pinDigits[0].focus();
-          }, 1500);
-        }
-      })
-      .catch(function() {
-        pinStatus.innerHTML = '<i class="bi bi-x-circle"></i> Error de conexión';
-        pinStatus.className = 'pin-status error';
-        pinLocked = false;
-      });
-    }
-
-    // --- Logout ---
-    var logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function() {
-        fetch('/api/auth', { method: 'DELETE' }).then(function() {
-          window.location.reload();
-        });
-      });
-    }
-
-    // --- Init if already authenticated ---
-    if (document.getElementById('dashboard').style.display === 'block') {
-      loadAgents();
-      loadActivity();
+      fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin }) })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+          if (res.ok && res.data.success) {
+            pinDigits.forEach(function(d) { d.classList.add('success'); });
+            pinStatus.innerHTML = '<i class="bi bi-check-circle"></i> Bienvenido';
+            pinStatus.className = 'pin-status success';
+            setTimeout(function() { window.location.reload(); }, 500);
+          } else {
+            pinDigits.forEach(function(d) { d.classList.add('error'); d.value = ''; });
+            pinStatus.innerHTML = '<i class="bi bi-x-circle"></i> PIN incorrecto';
+            pinStatus.className = 'pin-status error';
+            setTimeout(function() { pinDigits.forEach(function(d) { d.classList.remove('error', 'filled'); }); pinStatus.innerHTML = '<i class="bi bi-shield-lock"></i> 4 caracteres'; pinStatus.className = 'pin-status'; pinLocked = false; pinDigits[0].focus(); }, 1500);
+          }
+        })
+        .catch(function() { pinStatus.innerHTML = '<i class="bi bi-x-circle"></i> Error'; pinStatus.className = 'pin-status error'; pinLocked = false; });
     }
   </script>
 </body>
 </html>
+)}
