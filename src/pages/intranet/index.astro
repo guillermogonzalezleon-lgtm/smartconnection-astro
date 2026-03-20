@@ -92,6 +92,28 @@ const user = session.user || '';
     .log-content strong { font-size: 0.8rem; }
     .log-content p { color: var(--muted); font-size: 0.75rem; margin-top: 0.2rem; }
 
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--bg2); border: 1px solid rgba(0,193,193,0.2); border-radius: 16px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .modal h3 i { color: var(--primary); }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.25rem; cursor: pointer; margin-left: auto; }
+    .modal-close:hover { color: #fff; }
+    .modal label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; margin-top: 1rem; }
+    .modal select, .modal textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.75rem 1rem; color: #fff; font-size: 0.875rem; font-family: inherit; outline: none; transition: border 0.2s; }
+    .modal select:focus, .modal textarea:focus { border-color: var(--primary); }
+    .modal textarea { min-height: 100px; resize: vertical; }
+    .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .modal-btn { flex: 1; padding: 0.75rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
+    .modal-btn.cancel { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid rgba(255,255,255,0.1); }
+    .modal-btn.cancel:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+    .modal-btn.submit { background: var(--primary); color: var(--bg); }
+    .modal-btn.submit:hover { background: var(--primary-light); }
+    .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 1rem; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; margin-top: 1rem; }
+    .result-box.error { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+
     /* Quick Stats */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
     .stat-card { background: var(--bg2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; }
@@ -170,78 +192,107 @@ const user = session.user || '';
     </div>
   </div>
 
-  <script is:inline>
-    // --- Agent definitions ---
-    var agents = [
-      {
-        id: 'claude',
-        name: 'Claude',
-        provider: 'Anthropic',
-        role: 'Desarrollo & Code Review',
-        desc: 'Agente principal de desarrollo. Genera código, revisa PRs, sugiere mejoras de arquitectura y refactoring.',
-        icon: 'bi-robot',
-        color: '#d97706',
-        bgColor: 'rgba(217,119,6,0.1)',
-        status: 'active',
-        tasks: 12,
-      },
-      {
-        id: 'gpt',
-        name: 'GPT-4',
-        provider: 'OpenAI',
-        role: 'Contenido & Copywriting',
-        desc: 'Genera contenido para el sitio, emails de marketing, descripciones de servicios y traducciones.',
-        icon: 'bi-stars',
-        color: '#10b981',
-        bgColor: 'rgba(16,185,129,0.1)',
-        status: 'standby',
-        tasks: 8,
-      },
-      {
-        id: 'grok',
-        name: 'Grok',
-        provider: 'xAI',
-        role: 'Análisis & Research',
-        desc: 'Analiza tendencias del mercado SAP, investiga competencia y genera reportes de inteligencia de negocio.',
-        icon: 'bi-lightning-charge',
-        color: '#8b5cf6',
-        bgColor: 'rgba(139,92,246,0.1)',
-        status: 'active',
-        tasks: 5,
-      },
-      {
-        id: 'gemini',
-        name: 'Gemini',
-        provider: 'Google',
-        role: 'SEO & Analytics',
-        desc: 'Optimiza SEO, analiza métricas de Google Analytics y sugiere mejoras de posicionamiento.',
-        icon: 'bi-gem',
-        color: '#3b82f6',
-        bgColor: 'rgba(59,130,246,0.1)',
-        status: 'standby',
-        tasks: 3,
-      },
-      {
-        id: 'deployer',
-        name: 'Deploy Bot',
-        provider: 'GitHub Actions',
-        role: 'CI/CD & Deploy',
-        desc: 'Automatiza deploys a Vercel y AWS. Ejecuta tests, valida builds y gestiona releases.',
-        icon: 'bi-gear-wide-connected',
-        color: '#00c1c1',
-        bgColor: 'rgba(0,193,193,0.1)',
-        status: 'active',
-        tasks: 15,
-      },
-    ];
+  <!-- Prompt Modal -->
+  <div class="modal-overlay" id="promptModal">
+    <div class="modal">
+      <h3><i class="bi bi-terminal"></i> Ejecutar <span id="promptAgentName"></span> <button class="modal-close" onclick="closeModal('promptModal')">&times;</button></h3>
+      <label for="taskTypeSelect">Tipo de tarea</label>
+      <select id="taskTypeSelect">
+        <option value="general">General</option>
+        <option value="code-review">Code Review</option>
+        <option value="content">Contenido & Copy</option>
+        <option value="seo">SEO & Analytics</option>
+        <option value="research">Research & Analisis</option>
+      </select>
+      <label for="promptInput">Prompt</label>
+      <textarea id="promptInput" placeholder="Escribe tu instruccion para el agente..."></textarea>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeModal('promptModal')">Cancelar</button>
+        <button class="modal-btn submit" id="executeBtn" onclick="executeAgent()"><i class="bi bi-play-fill"></i> Ejecutar</button>
+      </div>
+    </div>
+  </div>
 
-    var activityData = [
-      { time: 'Ahora', agent: 'Claude', icon: 'bi-robot', color: 'rgba(217,119,6,0.1)', text: 'i18n implementado — español/inglés con language switcher' },
-      { time: '2h', agent: 'Grok', icon: 'bi-lightning-charge', color: 'rgba(139,92,246,0.1)', text: 'Agregado como partner tecnológico en Trust y AppsIA' },
-      { time: '3h', agent: 'Deploy Bot', icon: 'bi-gear-wide-connected', color: 'rgba(0,193,193,0.1)', text: 'Build exitoso — 2 páginas generadas (es + en)' },
-      { time: '5h', agent: 'GPT-4', icon: 'bi-stars', color: 'rgba(16,185,129,0.1)', text: 'Traducciones EN generadas para todos los componentes' },
-      { time: '1d', agent: 'Gemini', icon: 'bi-gem', color: 'rgba(59,130,246,0.1)', text: 'SEO audit — hreflang tags y canonical URLs configurados' },
-    ];
+  <!-- Result Modal -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal">
+      <h3><i class="bi bi-chat-square-text"></i> Resultado — <span id="resultAgentName"></span> <button class="modal-close" onclick="closeModal('resultModal')">&times;</button></h3>
+      <div class="result-box" id="resultContent"></div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeModal('resultModal')">Cerrar</button>
+        <button class="modal-btn submit" onclick="copyResult()"><i class="bi bi-clipboard"></i> Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Modal -->
+  <div class="modal-overlay" id="logsModal">
+    <div class="modal">
+      <h3><i class="bi bi-clock-history"></i> Logs — <span id="logsAgentName"></span> <button class="modal-close" onclick="closeModal('logsModal')">&times;</button></h3>
+      <div id="logsContent"></div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeModal('logsModal')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // --- State ---
+    var agents = [];
+    var currentAgentId = null;
+
+    // Fallback agent display config (icons/colors) when Supabase doesn't provide them
+    var agentDisplay = {
+      claude: { icon: 'bi-robot', color: '#d97706', bgColor: 'rgba(217,119,6,0.1)' },
+      gpt4: { icon: 'bi-stars', color: '#10b981', bgColor: 'rgba(16,185,129,0.1)' },
+      grok: { icon: 'bi-lightning-charge', color: '#8b5cf6', bgColor: 'rgba(139,92,246,0.1)' },
+      gemini: { icon: 'bi-gem', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.1)' },
+      deployer: { icon: 'bi-gear-wide-connected', color: '#00c1c1', bgColor: 'rgba(0,193,193,0.1)' },
+    };
+
+    // --- API helper ---
+    function agentAPI(payload) {
+      return fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
+    }
+
+    // --- Load agents from Supabase ---
+    function loadAgents() {
+      agentAPI({ action: 'list' }).then(function(res) {
+        if (res.ok && res.data.agents && Array.isArray(res.data.agents)) {
+          agents = res.data.agents;
+          renderAgents();
+        } else {
+          console.error('Error cargando agentes:', res.data);
+        }
+      }).catch(function(err) {
+        console.error('Error cargando agentes:', err);
+      });
+    }
+
+    // --- Load activity logs (all agents, most recent) ---
+    function loadActivity() {
+      // Load logs for all known agent IDs
+      var logPromises = ['claude', 'gpt4', 'grok', 'gemini', 'deployer'].map(function(id) {
+        return agentAPI({ action: 'logs', agentId: id });
+      });
+      Promise.all(logPromises).then(function(results) {
+        var allLogs = [];
+        results.forEach(function(res) {
+          if (res.ok && res.data.logs && Array.isArray(res.data.logs)) {
+            allLogs = allLogs.concat(res.data.logs);
+          }
+        });
+        // Sort by created_at desc
+        allLogs.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+        renderActivity(allLogs.slice(0, 10));
+      }).catch(function() {
+        renderActivity([]);
+      });
+    }
 
     // --- Render agents ---
     function renderAgents() {
@@ -251,56 +302,201 @@ const user = session.user || '';
       var totalTasks = 0;
 
       grid.innerHTML = agents.map(function(a) {
-        if (a.status === 'active') activeCount++;
-        totalTasks += a.tasks;
-        var statusLabel = a.status === 'active' ? 'Activo' : a.status === 'standby' ? 'En espera' : 'Offline';
+        var isActive = a.active;
+        if (isActive) activeCount++;
+        totalTasks += (a.tasks_count || 0);
+        var display = agentDisplay[a.agent_id] || { icon: 'bi-cpu', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.1)' };
+        var icon = a.icon || display.icon;
+        var color = a.color || display.color;
+        var bgColor = a.bg_color || display.bgColor;
+        var statusClass = isActive ? 'active' : 'standby';
+        var statusLabel = isActive ? 'Activo' : 'En espera';
+        var role = a.role || '';
+        var desc = a.description || '';
+        var name = a.name || a.agent_id;
+
         return '<div class="agent-card">' +
           '<div class="agent-header">' +
-            '<div class="agent-icon" style="background:' + a.bgColor + ';color:' + a.color + '"><i class="bi ' + a.icon + '"></i></div>' +
-            '<div><div class="agent-name">' + a.name + '</div><div class="agent-role">' + a.role + '</div></div>' +
+            '<div class="agent-icon" style="background:' + bgColor + ';color:' + color + '"><i class="bi ' + icon + '"></i></div>' +
+            '<div><div class="agent-name">' + name + '</div><div class="agent-role">' + role + '</div></div>' +
           '</div>' +
-          '<div class="agent-desc">' + a.desc + '</div>' +
+          '<div class="agent-desc">' + desc + '</div>' +
           '<div class="agent-status">' +
-            '<span class="status-dot ' + a.status + '"></span>' +
+            '<span class="status-dot ' + statusClass + '"></span>' +
             '<span>' + statusLabel + '</span>' +
-            '<span style="margin-left:auto;color:var(--muted)">' + a.tasks + ' tareas</span>' +
+            '<span style="margin-left:auto;color:var(--muted)">' + (a.tasks_count || 0) + ' tareas</span>' +
           '</div>' +
           '<div class="agent-actions">' +
-            '<button class="agent-btn primary" onclick="toggleAgent(\'' + a.id + '\')"><i class="bi bi-play-fill"></i> ' + (a.status === 'active' ? 'Pausar' : 'Activar') + '</button>' +
-            '<button class="agent-btn"><i class="bi bi-terminal"></i> Logs</button>' +
-            '<button class="agent-btn"><i class="bi bi-sliders"></i> Config</button>' +
+            '<button class="agent-btn primary" onclick="toggleAgent(\'' + a.agent_id + '\')"><i class="bi ' + (isActive ? 'bi-pause-fill' : 'bi-play-fill') + '"></i> ' + (isActive ? 'Pausar' : 'Activar') + '</button>' +
+            '<button class="agent-btn" onclick="openExecuteModal(\'' + a.agent_id + '\',\'' + name + '\')"><i class="bi bi-send"></i> Ejecutar</button>' +
+            '<button class="agent-btn" onclick="showLogs(\'' + a.agent_id + '\',\'' + name + '\')"><i class="bi bi-terminal"></i> Logs</button>' +
           '</div>' +
         '</div>';
       }).join('');
 
       document.getElementById('activeCount').textContent = activeCount;
+      var subEl = document.querySelector('.stat-card .stat-sub');
+      if (subEl) subEl.textContent = 'de ' + agents.length + ' configurados';
       document.getElementById('tasksCount').textContent = totalTasks;
       document.getElementById('lastDeploy').textContent = new Date().toLocaleDateString('es-CL');
     }
 
     // --- Render activity ---
-    function renderActivity() {
+    function renderActivity(logs) {
       var log = document.getElementById('activityLog');
       if (!log) return;
-      log.innerHTML = activityData.map(function(entry) {
+      if (!logs || logs.length === 0) {
+        log.innerHTML = '<div class="log-entry"><span class="log-time"></span><div class="log-content"><p style="color:var(--muted)">Sin actividad reciente</p></div></div>';
+        return;
+      }
+      log.innerHTML = logs.map(function(entry) {
+        var display = agentDisplay[entry.agent_id] || { icon: 'bi-cpu', color: 'rgba(148,163,184,0.1)' };
+        var timeAgo = getTimeAgo(entry.created_at);
         return '<div class="log-entry">' +
-          '<span class="log-time">' + entry.time + '</span>' +
-          '<div class="log-icon" style="background:' + entry.color + '"><i class="bi ' + entry.icon + '"></i></div>' +
-          '<div class="log-content"><strong>' + entry.agent + '</strong><p>' + entry.text + '</p></div>' +
+          '<span class="log-time">' + timeAgo + '</span>' +
+          '<div class="log-icon" style="background:' + (display.bgColor || 'rgba(148,163,184,0.1)') + '"><i class="bi ' + display.icon + '"></i></div>' +
+          '<div class="log-content"><strong>' + (entry.agent_name || entry.agent_id) + '</strong> <span style="color:var(--muted);font-size:0.7rem">(' + (entry.action || '') + ')</span><p>' + escapeHtml(entry.detail || '') + '</p></div>' +
         '</div>';
       }).join('');
     }
 
-    // --- Toggle agent ---
-    function toggleAgent(id) {
-      for (var i = 0; i < agents.length; i++) {
-        if (agents[i].id === id) {
-          agents[i].status = agents[i].status === 'active' ? 'standby' : 'active';
-          break;
-        }
-      }
-      renderAgents();
+    function getTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Ahora';
+      if (mins < 60) return mins + 'm';
+      var hours = Math.floor(mins / 60);
+      if (hours < 24) return hours + 'h';
+      var days = Math.floor(hours / 24);
+      return days + 'd';
     }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // --- Toggle agent via API ---
+    function toggleAgent(id) {
+      agentAPI({ action: 'toggle', agentId: id }).then(function(res) {
+        if (res.ok && res.data.success) {
+          // Update local state
+          for (var i = 0; i < agents.length; i++) {
+            if (agents[i].agent_id === id) {
+              agents[i].active = res.data.active;
+              break;
+            }
+          }
+          renderAgents();
+        } else {
+          alert(res.data.error || 'Error al cambiar estado del agente');
+        }
+      }).catch(function() {
+        alert('Error de conexion');
+      });
+    }
+
+    // --- Modal helpers ---
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function openExecuteModal(agentId, agentName) {
+      currentAgentId = agentId;
+      document.getElementById('promptAgentName').textContent = agentName;
+      document.getElementById('promptInput').value = '';
+      document.getElementById('taskTypeSelect').value = 'general';
+      document.getElementById('executeBtn').disabled = false;
+      document.getElementById('executeBtn').innerHTML = '<i class="bi bi-play-fill"></i> Ejecutar';
+      document.getElementById('promptModal').classList.add('active');
+      document.getElementById('promptInput').focus();
+    }
+
+    // --- Execute agent ---
+    function executeAgent() {
+      var prompt = document.getElementById('promptInput').value.trim();
+      if (!prompt) {
+        document.getElementById('promptInput').focus();
+        return;
+      }
+      var taskType = document.getElementById('taskTypeSelect').value;
+      var btn = document.getElementById('executeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Procesando...';
+
+      agentAPI({ action: 'execute', agentId: currentAgentId, prompt: prompt, taskType: taskType })
+        .then(function(res) {
+          closeModal('promptModal');
+          var agentName = '';
+          for (var i = 0; i < agents.length; i++) {
+            if (agents[i].agent_id === currentAgentId) { agentName = agents[i].name; break; }
+          }
+          document.getElementById('resultAgentName').textContent = agentName;
+          var resultBox = document.getElementById('resultContent');
+          if (res.ok && res.data.success) {
+            resultBox.textContent = res.data.result;
+            resultBox.className = 'result-box';
+          } else {
+            resultBox.textContent = res.data.error || 'Error desconocido';
+            resultBox.className = 'result-box error';
+          }
+          document.getElementById('resultModal').classList.add('active');
+          // Refresh logs
+          loadActivity();
+        })
+        .catch(function() {
+          closeModal('promptModal');
+          document.getElementById('resultAgentName').textContent = '';
+          var resultBox = document.getElementById('resultContent');
+          resultBox.textContent = 'Error de conexion con el servidor';
+          resultBox.className = 'result-box error';
+          document.getElementById('resultModal').classList.add('active');
+        });
+    }
+
+    // --- Copy result ---
+    function copyResult() {
+      var text = document.getElementById('resultContent').textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = document.querySelector('#resultModal .modal-btn.submit');
+        btn.innerHTML = '<i class="bi bi-check"></i> Copiado';
+        setTimeout(function() { btn.innerHTML = '<i class="bi bi-clipboard"></i> Copiar'; }, 1500);
+      });
+    }
+
+    // --- Show logs modal ---
+    function showLogs(agentId, agentName) {
+      document.getElementById('logsAgentName').textContent = agentName;
+      document.getElementById('logsContent').innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Cargando...</p>';
+      document.getElementById('logsModal').classList.add('active');
+
+      agentAPI({ action: 'logs', agentId: agentId }).then(function(res) {
+        var container = document.getElementById('logsContent');
+        if (res.ok && res.data.logs && res.data.logs.length > 0) {
+          container.innerHTML = res.data.logs.map(function(l) {
+            var statusColor = l.status === 'error' ? '#ef4444' : '#22c55e';
+            return '<div class="log-entry">' +
+              '<span class="log-time">' + getTimeAgo(l.created_at) + '</span>' +
+              '<span style="color:' + statusColor + ';font-size:0.7rem;min-width:50px">' + (l.status || 'ok') + '</span>' +
+              '<div class="log-content"><strong>' + (l.action || '') + '</strong><p>' + escapeHtml(l.detail || '') + '</p></div>' +
+            '</div>';
+          }).join('');
+        } else {
+          container.innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Sin logs para este agente</p>';
+        }
+      }).catch(function() {
+        document.getElementById('logsContent').innerHTML = '<p style="color:#ef4444;font-size:0.8rem">Error cargando logs</p>';
+      });
+    }
+
+    // --- Close modals on overlay click ---
+    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.classList.remove('active');
+      });
+    });
 
     // --- Auth ---
     var loginForm = document.getElementById('loginForm');
@@ -327,15 +523,15 @@ const user = session.user || '';
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('userName').textContent = res.data.user.name;
-            renderAgents();
-            renderActivity();
+            loadAgents();
+            loadActivity();
           } else {
-            error.textContent = res.data.error || 'Error de autenticación';
+            error.textContent = res.data.error || 'Error de autenticacion';
             error.style.display = 'block';
           }
         })
         .catch(function() {
-          error.textContent = 'Error de conexión';
+          error.textContent = 'Error de conexion';
           error.style.display = 'block';
         })
         .finally(function() {
@@ -357,8 +553,8 @@ const user = session.user || '';
 
     // --- Init if already authenticated ---
     if (document.getElementById('dashboard').style.display === 'block') {
-      renderAgents();
-      renderActivity();
+      loadAgents();
+      loadActivity();
     }
   </script>
 </body>
