@@ -33,54 +33,76 @@ export function verifySession(cookie: string | undefined): { valid: boolean; use
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, pin } = body;
 
-    if (!email || !password) {
-      return new Response(JSON.stringify({ error: 'Email y contraseña requeridos' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+    let userEmail: string;
+    let record: { nombre?: string; rol?: string; email: string };
+
+    if (pin) {
+      // PIN-based auth: search by pin field
+      const url = `${SUPABASE_URL}/rest/v1/usuarios?pin=eq.${encodeURIComponent(pin)}&activo=eq.true&limit=1`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        },
       });
-    }
 
-    // Query Supabase for user
-    const url = `${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&activo=eq.true&limit=1`;
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: 'Error de autenticación' }), {
+          status: 500, headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
-    const res = await fetch(url, {
-      headers: {
-        apikey: SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      },
-    });
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        return new Response(JSON.stringify({ error: 'PIN incorrecto' }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
-    if (!res.ok) {
-      console.error('Supabase error:', res.status, await res.text());
-      return new Response(JSON.stringify({ error: 'Error de autenticación' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+      record = data[0];
+      userEmail = record.email;
+    } else if (email && password) {
+      // Email/password auth
+      const url = `${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&activo=eq.true&limit=1`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        },
       });
-    }
 
-    const data = await res.json();
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: 'Error de autenticación' }), {
+          status: 500, headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
-    if (!data || data.length === 0) {
-      return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
-    const record = data[0];
+      record = data[0];
+      if (password !== (record as Record<string, unknown>).password) {
+        return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
-    if (password !== record.password) {
-      return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
+      userEmail = email;
+    } else {
+      return new Response(JSON.stringify({ error: 'PIN o credenciales requeridos' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // Create session
-    const sessionToken = hashSession(email);
-    const userName = record.nombre || email.split('@')[0];
+    const sessionToken = hashSession(userEmail);
+    const userName = record.nombre || userEmail.split('@')[0];
     const role = record.rol || 'user';
 
     cookies.set('sc_session', sessionToken, {
