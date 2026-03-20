@@ -6,17 +6,17 @@ interface AgentResult {
   status: 'success' | 'error';
 }
 
-const API_KEY = import.meta.env.OPENAI_API_KEY;
+const API_KEY = import.meta.env.GROQ_API_KEY;
 
 export async function run(task: string, config: { model?: string; systemPrompt?: string; maxTokens?: number; temperature?: number }): Promise<AgentResult> {
   const start = Date.now();
-  const model = config.model || 'gpt-4o';
+  const model = config.model || 'llama-3.3-70b-versatile';
 
   const messages: Array<{ role: string; content: string }> = [];
   if (config.systemPrompt) messages.push({ role: 'system', content: config.systemPrompt });
   messages.push({ role: 'user', content: task });
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${API_KEY}`,
@@ -34,12 +34,12 @@ export async function run(task: string, config: { model?: string; systemPrompt?:
 
   if (!res.ok) {
     const err = await res.text();
-    return { agent: 'gpt4', result: `Error ${res.status}: ${err}`, tokens: 0, durationMs, status: 'error' };
+    return { agent: 'groq', result: `Error ${res.status}: ${err}`, tokens: 0, durationMs, status: 'error' };
   }
 
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content || 'Sin respuesta';
   const tokens = data.usage?.total_tokens || 0;
 
-  return { agent: 'gpt4', result: text, tokens, durationMs, status: 'success' };
+  return { agent: 'groq', result: text, tokens, durationMs, status: 'success' };
 }

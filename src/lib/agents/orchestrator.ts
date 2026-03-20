@@ -1,5 +1,5 @@
 import * as claude from './claude';
-import * as gpt4 from './gpt4';
+import * as groq from './groq';
 import * as grok from './grok';
 import * as gemini from './gemini';
 import * as deployBot from './deployBot';
@@ -25,7 +25,7 @@ interface AgentConfig {
 
 const AGENT_MODULES: Record<string, typeof claude> = {
   claude,
-  gpt4,
+  groq,
   grok,
   gemini,
   deployer: deployBot,
