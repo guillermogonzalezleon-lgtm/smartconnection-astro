@@ -87,7 +87,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       record = data[0];
-      if (password !== (record as Record<string, unknown>).password) {
+      if (password !== (record as Record<string, unknown>).password_hash && password !== (record as Record<string, unknown>).password) {
         return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
           status: 401, headers: { 'Content-Type': 'application/json' },
         });
