@@ -46,7 +46,7 @@ if (!isAuth && activePage !== 'login') {
         <a href="/intranet" class={`sidebar-item ${activePage === 'dashboard' ? 'active' : ''}`}>
           <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
         </a>
-        <a href="/intranet/agents" class={`sidebar-item ${activePage === 'agents' ? 'active' : ''}`}>
+        <a href="https://intranet.smconnection.cl/dashboard/agents" class={`sidebar-item ${activePage === 'agents' ? 'active' : ''}`}>
           <i class="bi bi-robot"></i><span>Agentes IA</span>
         </a>
         <a href="/intranet/leads" class={`sidebar-item ${activePage === 'leads' ? 'active' : ''}`}>
@@ -59,10 +59,10 @@ if (!isAuth && activePage !== 'login') {
 
       <div class="sidebar-section">
         <div class="sidebar-section-label">Infraestructura</div>
-        <a href="/intranet/aws" class={`sidebar-item ${activePage === 'aws' ? 'active' : ''}`}>
+        <a href="https://intranet.smconnection.cl/dashboard/aws" class={`sidebar-item ${activePage === 'aws' ? 'active' : ''}`}>
           <i class="bi bi-cloud" style="color:var(--orange)"></i><span>AWS Panel</span>
         </a>
-        <a href="/intranet/deploy" class={`sidebar-item ${activePage === 'deploy' ? 'active' : ''}`}>
+        <a href="https://intranet.smconnection.cl/dashboard/labs" class={`sidebar-item ${activePage === 'deploy' ? 'active' : ''}`}>
           <i class="bi bi-rocket-takeoff"></i><span>Deploy & CI/CD</span>
         </a>
       </div>
@@ -122,10 +122,10 @@ if (!isAuth && activePage !== 'login') {
     <!-- Mobile Nav -->
     <nav class="mobile-nav" style="display:none">
       <a href="/intranet" class={activePage === 'dashboard' ? 'active' : ''}><i class="bi bi-grid-1x2"></i>Dashboard</a>
-      <a href="/intranet/agents" class={activePage === 'agents' ? 'active' : ''}><i class="bi bi-robot"></i>Agentes</a>
+      <a href="https://intranet.smconnection.cl/dashboard/agents" class={activePage === 'agents' ? 'active' : ''}><i class="bi bi-robot"></i>Agentes</a>
       <a href="/intranet/leads" class={activePage === 'leads' ? 'active' : ''}><i class="bi bi-people"></i>Leads</a>
       <a href="/intranet/analytics" class={activePage === 'analytics' ? 'active' : ''}><i class="bi bi-graph-up"></i>Analytics</a>
-      <a href="/intranet/aws" class={activePage === 'aws' ? 'active' : ''}><i class="bi bi-cloud"></i>AWS</a>
+      <a href="https://intranet.smconnection.cl/dashboard/aws" class={activePage === 'aws' ? 'active' : ''}><i class="bi bi-cloud"></i>AWS</a>
     </nav>
   </div>
 

@@ -124,8 +124,8 @@ export const translations = {
     portfolioSMCDesc: 'Sitio corporativo bilingüe con intranet de agentes IA, CRM integrado y deploy dual Vercel + AWS.',
     portfolioSMCTech: 'Astro · Tailwind · Supabase · Vercel',
     portfolioIntranet: 'Intranet IA',
-    portfolioIntranetDesc: 'Dashboard interno con 5 agentes de IA (Claude, Groq, Grok, Gemini) para automatización de desarrollo, contenido y SEO.',
-    portfolioIntranetTech: 'Astro · Supabase · Anthropic · xAI · Groq',
+    portfolioIntranetDesc: 'Dashboard interno con agentes IA, Kanban, CRM, streaming real-time, Integration Hub SAP BTP y toggle dark/light.',
+    portfolioIntranetTech: 'Next.js · AWS Amplify · Supabase · Groq · SAP BTP',
     portfolioCTA: 'Ver más proyectos',
     portfolioTag: 'En producción',
 
@@ -331,8 +331,8 @@ export const translations = {
     portfolioSMCDesc: 'Bilingual corporate site with AI agent intranet, integrated CRM and dual Vercel + AWS deploy.',
     portfolioSMCTech: 'Astro · Tailwind · Supabase · Vercel',
     portfolioIntranet: 'AI Intranet',
-    portfolioIntranetDesc: 'Internal dashboard with 5 AI agents (Claude, Groq, Grok, Gemini) for development, content and SEO automation.',
-    portfolioIntranetTech: 'Astro · Supabase · Anthropic · xAI · Groq',
+    portfolioIntranetDesc: 'Internal dashboard with AI agents, Kanban, CRM, real-time streaming, SAP BTP Integration Hub and dark/light toggle.',
+    portfolioIntranetTech: 'Next.js · AWS Amplify · Supabase · Groq · SAP BTP',
     portfolioCTA: 'View more projects',
     portfolioTag: 'In production',
 
